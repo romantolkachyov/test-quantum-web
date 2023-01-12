@@ -1,0 +1,57 @@
+x-app-common: &app-common
+  build:
+    context: .
+  # allow interactive input for debug (ipdb)
+  stdin_open: true
+  tty: true
+  volumes:
+    - .:/app
+  depends_on:
+    redis:
+      condition: service_healthy
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+    depends_on:
+      - api
+    ports:
+      - 3000:3000
+    volumes:
+      - .:/app
+  api:
+    <<: *app-common
+    environment:
+      UVICORN_HOST: 0.0.0.0
+    command:
+      - /bin/bash
+      - -c
+      - |
+        python manage.py collectstatic --no-input
+        uvicorn quantum_web.asgi:application --reload
+    ports:
+      - 8000:8000
+  worker:
+    <<: *app-common
+    command:
+      - /bin/bash
+      - -c
+      - |
+        python manage.py qworker
+  redis:
+    image: redis:7.0.7-alpine
+    healthcheck:
+      test: [ "CMD", "redis-cli","ping" ]
+      start_period: 30s
+      interval: 10s
+      timeout: 30s
+      retries: 5
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data:

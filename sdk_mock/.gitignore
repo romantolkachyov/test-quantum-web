@@ -1,0 +1,8 @@
+.venv
+.idea
+.vscode
+__pycache__
+data
+*.pyc
+*.egg-info
+build

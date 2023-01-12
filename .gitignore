@@ -1,0 +1,25 @@
+# MacOS
+.DS_Store
+
+# IDEs
+.idea
+
+# python
+__pycache__/
+*.pyc
+*.egg-info
+build
+.coverage
+coverage.coverage
+coverage.xml
+poetry.toml
+
+# django
+static
+
+# linters
+.ruff_cache
+.mypy_cache/
+
+# node.js
+node_modules/

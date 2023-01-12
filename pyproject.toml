@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "quantum-web"
+version = "0.1.0"
+description = "Test assigment"
+authors = ["Roman Tolkachyov <roman@tolkachyov.name>"]
+readme = "README.md"
+packages = [{include = "quantum_web"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+django = "^4.1.5"
+channels = {version = "^4.0.0"}
+qboard = {path = "sdk_mock"}
+uvicorn = {extras = ["standard"], version = "^0.20.0"}
+django-async-redis = "^0.2.0"
+django-redis = "^5.2.0"
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.0.219"
+isort = "^5.11.4"
+mypy = "^0.991"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
