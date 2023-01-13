@@ -96,7 +96,7 @@ class JobResultListener:
                 if msg.get('type') == 'stop':
                     log.debug("get_messages receive stop message, unsubscribing")
                     break
-        except asyncio.CancelledError as e:  # pragma: no cover
+        except asyncio.CancelledError as e:
             raise e
         finally:
             self.unsubscribe(job_id, queue)

@@ -48,6 +48,14 @@ class ListenerTest(IsolatedAsyncioTestCase):
         start_mock.assert_called_once()
         subscribe_mock.assert_called_once_with("1234")
 
+    @patch("quantum_web.webapp.listener.listener.JobResultListener.start")
+    @patch("quantum_web.webapp.listener.listener.asyncio.Queue.get", side_effect=asyncio.CancelledError)
+    async def test_get_message_cancelled(self, get_mock: MagicMock, start_mock: MagicMock):
+        gen = self.listener.get_messages("1234")
+        with self.assertRaises(asyncio.CancelledError):
+            await anext(gen)
+        self.assertEqual(len(self.listener.collection), 0)
+
     async def test_wait_job_stream_unavailable(self):
         redis_mock = AsyncMock()
         redis_mock.exists = AsyncMock(return_value=False)
