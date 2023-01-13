@@ -25,11 +25,13 @@ class SubscribersCollection:
 
     Manage subscribers such a way that we can spread all subscribes to multiple groups.
     Each group has only one subscription to a particular topic. If we add another listener
-    for the same topic, collection will create another group.
+    for the same topic, collection will create another group. It allows to stream same topic
+    with different offset for two different clients.
 
-    At the moment of listner removal, collection tries to optimize groups: if we remove listener
-    from the first group then collection will check next group for subscribers to the same topic
-    and move their listner to the first group. It allows to maintain the shortest group list.
+    Because of unsubscription, some keys can be free and we can decrease number of groups by
+    moving subscribers from the upper group to a free group. In order to do so you need to call
+    `optimize()`. This is a manual operation because we don't want to move subscribers
+    while iterating.
     """
     groups: list[dict[str, Subscriber]]
 
@@ -65,32 +67,27 @@ class SubscribersCollection:
             if stream_name in group and group[stream_name].queue == queue:
                 log.debug("Removing listener from group %i", i)
                 del group[stream_name]
-
-                # build upper groups list
-                upper_groups = []
-                for other in reversed(self.groups):  # pragma: no branch
-                    if other == group:
-                        break
-                    upper_groups.append(other)
-
-                # try to find same stream listeners in an upper group and move it to the lowest
-                # unoccupied group (starting from the lowest group)
-                for other in upper_groups:
-                    if stream_name in other:
-                        log.debug("Found same stream listener in the upper group."
-                                  " Moving to the actual group.")
-                        group[stream_name] = other[stream_name]
-                        del other[stream_name]
-                        if not other:
-                            self.groups.remove(other)
-                        break
-                else:
-                    if not group:
-                        log.debug("Group become empty, remove it.")
-                        self.groups.remove(group)
                 return
         log.error("Can't remove stream from the collection. Subscriber not found (stream: %s)",
                   stream_name)
+
+    def optimize(self):
+        for group in reversed(self.groups[:]):
+            log.debug("Optimizing group %s", group.keys())
+            for key in group.copy():
+                self.optimize_group(key, group)
+            if not group:
+                log.debug("Group %s is empty, removing", group)
+                self.groups.remove(group)
+
+    def optimize_group(self, key, group):
+        for other in self.groups:
+            if key in other:
+                continue
+            log.debug("Propagate key %s to the upper group")
+            other[key] = group[key]
+            del group[key]
+            break
 
     def get_groups(self):
         """Get listeners groups."""

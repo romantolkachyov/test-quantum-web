@@ -107,6 +107,8 @@ function App() {
         setSocketUrl(socketBaseUrl + jobId.jobId + '/');
         setShouldConnect(true);
       }
+    } else {
+      setButtonState('active')
     }
   }, [jobId])
   return (

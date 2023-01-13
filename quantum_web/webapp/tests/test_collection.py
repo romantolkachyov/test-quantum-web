@@ -23,6 +23,7 @@ class SubscribersCollectionTest(TestCase):
         self.assertGroupCount(2)
         # remove first subscriber and make sure we have duplicated stream migrate to first group
         self.collection.remove('1234', first_queue)
+        self.collection.optimize()
         self.assertGroupCount(1)
         self.assertEqual(self.collection.groups[0]['1234'].queue, second_queue)
 
@@ -31,6 +32,7 @@ class SubscribersCollectionTest(TestCase):
         queue = self.collection.add('1234')
         self.assertGroupCount(1)
         self.collection.remove('1234', queue)
+        self.collection.optimize()
         self.assertGroupCount(0)
 
     def test_group_management_remove_invalid(self):

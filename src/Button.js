@@ -1,18 +1,10 @@
 import './Button.css'
 
-function Button({ onClick, state }) {
-  if (state === 'active') {
-    return (
-      <button onClick={onClick} className="Button">
-        Start
-      </button>
-    )
-  } else {
-    return (
-      <button disabled="disabled" className="Button">
-        {state}
-      </button>
-    )
-  }
+function Button({ onClick, state, ...props }) {
+  return (
+    <button onClick={onClick} { ... state === 'active' ? {} : {disabled: "disabled"} } className="Button" {... props}>
+      {state === 'active' ? "Start" : state}
+    </button>
+  )
 }
 export default Button

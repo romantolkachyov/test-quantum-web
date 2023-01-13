@@ -68,6 +68,7 @@ class JobResultListener:
         """
         redis = await self.get_redis()
         while True:
+            self.collection.optimize()
             for group in self.collection.get_groups()[:]:
                 streams = {k: v.last_message_id for k, v in group.items()}
                 log.debug("Reading data from streams: %s", streams)

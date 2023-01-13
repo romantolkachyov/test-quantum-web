@@ -48,4 +48,5 @@ class SteamingRequestConsumer(AsyncJsonWebsocketConsumer):
                 await self.send_json(payload)
         except asyncio.CancelledError:
             log.debug("Stop consumer, streaming_job task cancelled")
+            return
         await self.close()
