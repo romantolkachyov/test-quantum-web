@@ -1,55 +1,31 @@
+import moment from "moment/moment";
+import useWebSocket from 'react-use-websocket';
+import {useCallback, useEffect, useState} from "react";
+import {useLoaderData, useNavigate} from "react-router-dom";
+import {generateDemoData, jobWebSocketUrl} from "./utils";
+
 import './App.css';
-import './Chart.js';
 import Chart from "./Chart";
 import Button from "./Button";
-
-import useWebSocket, {ReadyState} from 'react-use-websocket';
-import moment from "moment/moment";
-import {useEffect, useState} from "react";
-import {useLoaderData, useNavigate} from "react-router-dom";
-
-const socketBaseUrl = "ws://localhost:8000/ws/process/"
+import Status from "./Status";
 
 export async function loader({ params }) {
-  return {jobId: params.jobId};
-}
-
-const defaultData = []
-let sampleDate = moment()
-for(let i=0; i<=100; i++) {
-  defaultData.push({
-    date: sampleDate.valueOf(),
-    energy: Math.cos(i / 5)
-  })
-  sampleDate.add('1', 'minute')
+  return params.jobId;
 }
 
 function App() {
   const navigate = useNavigate();
   const jobId = useLoaderData();
   const [shouldConnect, setShouldConnect] = useState(!!jobId)
-  const [shouldReconnect, setShouldReconnect] = useState(true)
-  const [socketUrl, setSocketUrl] = useState(jobId ? socketBaseUrl + jobId.jobId + '/' : "");
-  const [data, setData] = useState(defaultData)
+  const [socketUrl, setSocketUrl] = useState(jobWebSocketUrl(jobId));
+  const [chartData, setChartData] = useState(generateDemoData())
   const [minEnergy, setMinEnergy] = useState(0.0)
-  const [buttonState, setButtonState] = useState("loading")
+  const [status, setStatus] = useState("loading")
   const [lastStopReason, setLastStopReason] = useState("")
   const [demoMode, setDemoMode] = useState(true)
 
-  function getStatusText() {
-    if (buttonState === 'waiting') {
-      return "Waiting for a worker to pickup your task."
-    } else if (buttonState === 'running') {
-      return (
-        <div>Worker is running your task at the moment.</div>
-      )
-    } else if (buttonState === 'active' && lastStopReason) {
-      return lastStopReason
-    }
-    return (<div>&nbsp;</div>)
-  }
-  function onClickStart() {
-    setButtonState('waiting')
+  const onClickStart = useCallback(() => {
+    setStatus('waiting')
     fetch("/api/start")
       .then((response) => response.json())
       .then(data => {
@@ -57,69 +33,71 @@ function App() {
           alert("Invalid server response")
           return
         }
-        setShouldReconnect(true)
-        setData([])
+        setChartData([])
         setMinEnergy(0.0)
         navigate('/job/' + data.job_id + '/')
       })
+  }, [navigate])
+
+  function addSolution(date, energy) {
+    let dateValue = moment(date).valueOf()
+    // hack to fix chart: broken if there are more than one point in
+    // particular millisecond (max resolution of moment.js)
+    if (chartData.length > 0) {
+      const lastDate = chartData[chartData.length-1].date
+      if (dateValue <= lastDate) {
+        dateValue = lastDate + 1
+      }
+    }
+    chartData.push({date: dateValue, energy: energy + 1000})
+    return [...chartData]
   }
+
   useWebSocket(socketUrl, {
     onOpen: () => {
       setDemoMode(false)
-      setData([])
-      console.log("WebSocket opened")
+      setChartData([])
     },
     shouldReconnect: (closeEvent) => false,
     onMessage: (event) => {
-      console.log("Message event:", event)
-      setButtonState('running')
+      if (status === 'waiting') {
+        setStatus('running')
+      }
       const d = JSON.parse(event.data)
       if (d.type === "solution") {
-        const startDate = moment(d.date)
         const energy = parseFloat(d.energy)
-        let date = startDate.valueOf()
-        // hack to fix chart: broken if there are more than one point in
-        // particular millisecond (max resolution of moment.js)
-        if (data.length > 0) {
-          const lastDate = data[data.length-1].date
-          if (date <= lastDate) {
-            date = lastDate + 1
-          }
-        }
-        data.push({date: date, energy: energy + 1000})
-        setData([...data])
         if (energy < minEnergy) {
           setMinEnergy(energy)
         }
+        setChartData(addSolution(d.date, energy))
       } else if (d.type === "stop") {
-        setButtonState('active')
-        setShouldReconnect(false)
+        setStatus('active')
         setLastStopReason(d.reason)
-        console.log("STOP RECEIVED")
       }
     },
   }, shouldConnect)
+
   useEffect(() => {
-    console.log("use effect", jobId)
     if (jobId) {
-      const newUrl = socketBaseUrl + jobId.jobId + '/';
+      const newUrl = jobWebSocketUrl(jobId);
       if (newUrl !== socketUrl) {
-        setSocketUrl(socketBaseUrl + jobId.jobId + '/');
+        setSocketUrl(newUrl);
         setShouldConnect(true);
       }
     } else {
-      setButtonState('active')
+      setStatus('active')
     }
   }, [jobId])
+
   return (
     <div className="App">
       <header className="App-header">
         <h1>Evolution Log</h1>
       </header>
-      <Chart data={data} demoMode={demoMode} hackOffset={1000} />
+      <Chart data={chartData} demoMode={demoMode} hackOffset={1000} />
       <p className="energy-text">Min energy: {minEnergy.toFixed(2)}</p>
-      <Button onClick={onClickStart} state={buttonState} />
-      <div style={{marginTop: "2em", color: "gray"}}>{getStatusText()}</div>
+      <Button onClick={onClickStart} state={status} />
+      <Status state={status} lastStopReason={lastStopReason} />
     </div>
   );
 }
