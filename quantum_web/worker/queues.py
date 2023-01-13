@@ -98,5 +98,5 @@ class JobQueue:
                 Block until new tasks will be received.
                 """
         _, job_id = redis.blpop(self.queue_name)
-        job_id = job_id.decode()
+        job_id = job_id
         return job_id

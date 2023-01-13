@@ -5,7 +5,7 @@ from collections import defaultdict
 from django.conf import settings
 from django.core.cache import cache
 
-from .collection import Listener, SubscribersCollection
+from .collection import Subscriber, SubscribersCollection
 
 log = logging.getLogger(__name__)
 
@@ -26,13 +26,13 @@ class JobResultListener:
 
     Groups allow to have multiple listeners with different offset for a single stream.
     """
-    listeners: dict[str, Listener]
+    listeners: dict[str, Subscriber]
     started: bool = False
     queue_prefix: str
     task: asyncio.Task
 
     def __init__(self, queue_prefix: str = settings.RESULT_QUEUE_PREFIX):
-        self.listeners = defaultdict(Listener)
+        self.listeners = defaultdict(Subscriber)
         self.queue_prefix = queue_prefix
         self.collection = SubscribersCollection()
 
@@ -51,6 +51,7 @@ class JobResultListener:
         """Start listener background job."""
         if self.started:
             raise RuntimeError("JobResultListener already started")
+        self.started = True
         loop = asyncio.get_event_loop()
         self.task = loop.create_task(self.listen_all())
 
@@ -68,10 +69,6 @@ class JobResultListener:
         redis = await self.get_redis()
         while True:
             for group in self.collection.get_groups()[:]:
-                if not group:
-                    # skip empty groups
-                    # TODO: it is impossible
-                    continue
                 streams = {k: v.last_message_id for k, v in group.items()}
                 log.debug("Reading data from streams: %s", streams)
                 results = await redis.xread(streams, block=100)
@@ -81,8 +78,7 @@ class JobResultListener:
                     for msg_id, payload in messages:
                         payload = {k.decode(): v.decode() for k, v in payload.items()}
                         log.debug("Publish %s to all subscribers. Payload: %s", msg_id, payload)
-                        if stream_name in group:
-                            await group[stream_name].put(msg_id, payload)
+                        await group[stream_name].put(msg_id, payload)
             await asyncio.sleep(1)
 
     async def get_messages(self, job_id: str):
@@ -125,10 +121,9 @@ class JobResultListener:
                       stream_name)
             raise StreamUnavailable()
 
-    @staticmethod
-    def get_stream_name(job_id):
+    def get_stream_name(self, job_id):
         """Get stream name for job id."""
-        return f"{settings.RESULT_QUEUE_PREFIX}_{job_id}"
+        return f"{self.queue_prefix}_{job_id}"
 
     @staticmethod
     def get_redis():

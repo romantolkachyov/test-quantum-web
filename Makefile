@@ -3,4 +3,9 @@ lint:
 	poetry run ruff quantum_web
 	poetry run mypy quantum_web
 
-fix:
+test:
+	docker compose exec api coverage run manage.py test
+
+coverage: test
+	docker compose exec api coverage xml
+	docker compose exec api coverage report -m --skip-covered

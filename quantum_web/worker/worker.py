@@ -1,11 +1,17 @@
+import logging
 from typing import Callable
 
 import numpy as np
 
-from quantum_web.worker.queues import ResultQueue, log
+from quantum_web.worker.queues import ResultQueue
 from sdk_mock import qboard
 from sdk_mock.qboard.constants import (  # TODO: interval, new_loss?
-    CB_TYPE_INTERRUPT_TARGET, CB_TYPE_INTERRUPT_TIMEOUT, CB_TYPE_NEW_SOLUTION)
+    CB_TYPE_INTERRUPT_TARGET,
+    CB_TYPE_INTERRUPT_TIMEOUT,
+    CB_TYPE_NEW_SOLUTION,
+)
+
+log = logging.getLogger(__name__)
 
 
 class QuantumWorker:
@@ -24,6 +30,8 @@ class QuantumWorker:
 
         The main class method.
         """
+        stop_message = ""
+
         log.info("Job started (job_id=%s)", self.job_id)
         self.result.put_start()
 
@@ -37,8 +45,9 @@ class QuantumWorker:
             )
         except Exception as e:  # noqa
             log.exception("Solver raised an unhandled exception.")
+            stop_message = "Solver raised an unhandled exception: %s" % e
         finally:
-            self.result.put_stop()
+            self.result.put_stop(stop_message)
             log.info("Job stopped (job_id: %s).", self.job_id)
 
     def solver_callback(self, payload: dict):
@@ -58,13 +67,16 @@ class QuantumWorker:
         }.get(int(cb_type))
         if callback is not None:
             return callback(payload)
-        log.error("Unhandled event type `%s`. Skip event. Payload: %s", cb_type, payload)
+        log.warning("Unhandled solver event type `%s`. Skip event. Payload: %s",
+                    cb_type, payload)
 
     def on_new_solution(self, payload: dict):
         """Handle new solution from the solver."""
+        if 'energy' not in payload:
+            log.error("Worker receive solution without energy. Payload: %s", payload)
+            return
         energy = payload["energy"]
-        spins = payload["spins"]
-        log.debug("New solution found, energy %f, result vector %s", energy, spins)
+        log.debug("New solution found, energy %f", energy)
         self.result.put_solution(energy)
 
     def on_interrupt_timeout(self, payload: dict):

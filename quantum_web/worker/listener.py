@@ -12,17 +12,18 @@ class QuantumListener:
 
     Listen to job queue and spawns subprocesses to handle received jobs.
     """
-    def __init__(self):
+    def __init__(self, max_concurrency: int = settings.WORKER_MAX_CONCURRENCY):
         self.queue = JobQueue()
+        self.max_concurrency = max_concurrency
 
     def run(self) -> None:
         """Start worker.
 
         Listen to job queue and spawn new processes in the pool.
         """
-        n_proc = settings.WORKER_MAX_CONCURRENCY
-        logging.info("Starting QuantumListener with %i subprocesses", n_proc)
-        with Pool(n_proc) as pool:
+        logging.info("Starting QuantumListener with %i subprocesses",
+                     self.max_concurrency)
+        with Pool(self.max_concurrency) as pool:
             while True:
                 job = self.queue.get()
                 log.info("Job received (job_id=%s)", job)

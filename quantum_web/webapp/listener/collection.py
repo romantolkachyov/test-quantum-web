@@ -6,12 +6,12 @@ log = logging.getLogger(__name__)
 
 
 @dataclass
-class Listener:
-    """Listener data class.
+class Subscriber:
+    """Subscriber data class.
     """
     #: id of the last message received from the stream
     last_message_id: str = "0"
-    #: set of queues new messages should be put to
+    #: subscriber queue
     queue: asyncio.Queue = field(default_factory=asyncio.Queue)
 
     async def put(self, msg_id, payload):
@@ -31,17 +31,17 @@ class SubscribersCollection:
     from the first group then collection will check next group for subscribers to the same topic
     and move their listner to the first group. It allows to maintain the shortest group list.
     """
-    groups: list[dict[str, Listener]]
+    groups: list[dict[str, Subscriber]]
 
     def __init__(self):
         self.groups = []
 
     def add(self, stream_name: str) -> asyncio.Queue:
-        """Add new listner for the stream and return queue to consume messages.
+        """Add new subscriber for the stream and return queue to consume messages.
 
         Looking for a first group without listeners on specified stream.
         """
-        instance = Listener()
+        instance = Subscriber()
         for i, group in enumerate(self.groups):
             if stream_name not in group:
                 log.debug("Add listener to the group %i", i)
@@ -54,7 +54,7 @@ class SubscribersCollection:
         return instance.queue
 
     def remove(self, stream_name: str, queue: asyncio.Queue):
-        """Remove listener from the collection.
+        """Remove subscriber from the collection.
 
         Search listener in all groups, remove and try to compress groups be moving same stream
         listeners to the found listener group. It allows to maintain the shortest group list
@@ -68,7 +68,7 @@ class SubscribersCollection:
 
                 # build upper groups list
                 upper_groups = []
-                for other in reversed(self.groups):
+                for other in reversed(self.groups):  # pragma: no branch
                     if other == group:
                         break
                     upper_groups.append(other)
@@ -81,15 +81,22 @@ class SubscribersCollection:
                                   " Moving to the actual group.")
                         group[stream_name] = other[stream_name]
                         del other[stream_name]
+                        if not other:
+                            self.groups.remove(other)
                         break
                 else:
                     if not group:
                         log.debug("Group become empty, remove it.")
                         self.groups.remove(group)
                 return
-        log.error("Can't remove stream from the collection. Listener not found (stream: %s)",
+        log.error("Can't remove stream from the collection. Subscriber not found (stream: %s)",
                   stream_name)
 
     def get_groups(self):
         """Get listeners groups."""
         return self.groups
+
+    def __len__(self):
+        return sum([
+            len(g) for g in self.groups
+        ])

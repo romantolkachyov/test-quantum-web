@@ -1,0 +1,9 @@
+[run]
+branch = True
+data_file = coverage.coverage
+;Uncomment if you want to find never imported modules with no coverage
+;source = quantum_web
+omit =
+    manage.py
+    quantum_web/asgi.py
+    quantum_web/wsgi.py

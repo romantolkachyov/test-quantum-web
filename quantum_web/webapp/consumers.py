@@ -3,7 +3,6 @@ import logging
 
 from channels.exceptions import StopConsumer
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
-from django.core.cache import cache
 from django_async_redis.client import DefaultClient
 
 from .listener.listener import listener
@@ -31,7 +30,6 @@ class SteamingRequestConsumer(AsyncJsonWebsocketConsumer):
         """
         await super().websocket_connect(event)
         loop = asyncio.get_event_loop()
-        self.redis = await cache.client.get_client()
         self.task = loop.create_task(self.streaming_job())
 
     async def websocket_disconnect(self, event):
@@ -39,7 +37,6 @@ class SteamingRequestConsumer(AsyncJsonWebsocketConsumer):
         log.debug("Client disconnected, stopping consumer")
         if not self.task.done():
             self.task.cancel()
-        await self.redis.close()
         raise StopConsumer()
 
     async def streaming_job(self):
