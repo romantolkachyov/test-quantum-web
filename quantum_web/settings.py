@@ -139,6 +139,9 @@ CACHES = {
         "LOCATION": REDIS_LOCATION,
         "OPTIONS": {
             "CLIENT_CLASS": "django_async_redis.client.DefaultClient",
+            "REDIS_CLIENT_KWARGS": {
+                "decode_responses": True,
+            }
         }
     },
 }
@@ -183,6 +186,11 @@ LOGGING = {
         "quantum_web": {
             "handlers": ["console"],
             "level": "INFO",
+            "propagate": False,
+        },
+        "quantum_web.webapp": {
+            "handlers": ["console"],
+            "level": "DEBUG",
             "propagate": False,
         },
     }

@@ -44,25 +44,30 @@ function App() {
       setData([])
       console.log("WebSocket opened")
     },
-    shouldReconnect: (closeEvent) => {
-      console.log("Reconnect reason event:", closeEvent)
-      return shouldReconnect
-    },
+    shouldReconnect: (closeEvent) => false,
     onMessage: (event) => {
       console.log("Message event:", event)
       const d = JSON.parse(event.data)
       if (d.type === "solution") {
         const startDate = moment(d.date)
         const energy = parseFloat(d.energy)
-        const date = startDate.valueOf()
+        let date = startDate.valueOf()
+        // hack to fix chart: broken if there are more than one point in
+        // particular millisecond (max resolution of moment.js)
+        if (data.length > 0) {
+          const lastDate = data[data.length-1].date
+          if (date <= lastDate) {
+            date = lastDate + 1
+          }
+        }
         data.push({date: date, energy: energy + 1000})
-        data.sort((a, b) => (a.date > b.date) ? 1 : -1)
         setData([...data])
         if (energy < minEnergy) {
           setMinEnergy(energy)
         }
       } else if (d.type === "stop") {
         setShouldReconnect(false)
+        console.log("STOP RECEIVED")
       }
     },
   }, shouldConnect)

@@ -6,7 +6,7 @@ from django.conf import settings
 from redis.client import Redis
 
 log = logging.getLogger(__name__)
-redis = Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=settings.REDIS_DB)
+redis = Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=settings.REDIS_DB, decode_responses=True)
 
 
 class EventType(enum.Enum):
