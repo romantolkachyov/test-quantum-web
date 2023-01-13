@@ -116,11 +116,13 @@ class JobResultListener:
             if exists:
                 log.debug("Stream %s exists.", stream_name)
                 return True
-            log.debug("Worker didn't created stream %s yet, sleep %i seconds", stream_name, sleep_time)
+            log.debug("Worker didn't created stream %s yet, sleep %i seconds",
+                      stream_name, sleep_time)
             await asyncio.sleep(sleep_time)
             try_n += 1
         else:
-            log.error("Worker didn't create stream %s for too long. Consider task failed.", stream_name)
+            log.error("Worker didn't create stream %s for too long. Consider task failed.",
+                      stream_name)
             raise StreamUnavailable()
 
     @staticmethod

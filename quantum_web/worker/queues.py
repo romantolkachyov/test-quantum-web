@@ -6,7 +6,12 @@ from django.conf import settings
 from redis.client import Redis
 
 log = logging.getLogger(__name__)
-redis = Redis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=settings.REDIS_DB, decode_responses=True)
+redis = Redis(
+    host=settings.REDIS_HOST,
+    port=settings.REDIS_PORT,
+    db=settings.REDIS_DB,
+    decode_responses=True
+)
 
 
 class EventType(enum.Enum):
@@ -68,7 +73,8 @@ class ResultQueue:
         Make sure we didn't send STOP message and reset stream ttl.
         """
         if self.stopped:
-            raise RuntimeError("Trying to put message in the stream while STOP message already sent.")
+            raise RuntimeError("Trying to put message in the stream "
+                               "while STOP message already sent.")
         log.debug("Send message with type %s (kwargs: %s) to the stream %s",
                   event_type, kwargs, self.stream_name)
         redis.xadd(self.stream_name, {

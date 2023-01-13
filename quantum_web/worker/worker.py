@@ -44,32 +44,36 @@ class QuantumWorker:
     def solver_callback(self, payload: dict):
         """Solver callback.
 
-        Solver invoke this callback on some kind of events like new solution found or solver stopped.
+        Solver invoke this callback on some kind of events like new solution found
+        or solver stopped.
         """
         cb_type = payload.get('cb_type')
-        callback: Callable[[dict], None] = {
+        if cb_type is None:
+            log.error("No cb_type provided in callback payload: %s", payload)
+            raise RuntimeError("No cb_type provided")
+        callback: Callable[[dict], None] | None = {
             CB_TYPE_NEW_SOLUTION: self.on_new_solution,
             CB_TYPE_INTERRUPT_TIMEOUT: self.on_interrupt_timeout,
             CB_TYPE_INTERRUPT_TARGET: self.on_interrupt_target,
-        }.get(cb_type)
+        }.get(int(cb_type))
         if callback is not None:
             return callback(payload)
         log.error("Unhandled event type `%s`. Skip event. Payload: %s", cb_type, payload)
 
-    def on_new_solution(self, payload):
+    def on_new_solution(self, payload: dict):
         """Handle new solution from the solver."""
         energy = payload["energy"]
         spins = payload["spins"]
         log.debug("New solution found, energy %f, result vector %s", energy, spins)
         self.result.put_solution(energy)
 
-    def on_interrupt_timeout(self, payload):
+    def on_interrupt_timeout(self, payload: dict):
         """Handle interrupt event caused by specified solver timeout."""
-        msg = f"Solver interrupted by timeout"
+        msg = "Solver interrupted by timeout"
         log.info("%s (job_id=%s)", msg, self.job_id)
         self.result.put_stop(msg)
 
-    def on_interrupt_target(self, payload):
+    def on_interrupt_target(self, payload: dict):
         """Handle interruption event caused by reaching (?) the target.
 
         No target specified in the test assigment.

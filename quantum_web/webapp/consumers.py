@@ -1,5 +1,5 @@
-import logging
 import asyncio
+import logging
 
 from channels.exceptions import StopConsumer
 from channels.generic.websocket import AsyncJsonWebsocketConsumer

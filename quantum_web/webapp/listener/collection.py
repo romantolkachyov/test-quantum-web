@@ -2,7 +2,6 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 
-
 log = logging.getLogger(__name__)
 
 
@@ -78,7 +77,8 @@ class SubscribersCollection:
                 # unoccupied group (starting from the lowest group)
                 for other in upper_groups:
                     if stream_name in other:
-                        log.debug("Found same stream listener in the upper group. Moving to the actual group.")
+                        log.debug("Found same stream listener in the upper group."
+                                  " Moving to the actual group.")
                         group[stream_name] = other[stream_name]
                         del other[stream_name]
                         break
@@ -87,7 +87,8 @@ class SubscribersCollection:
                         log.debug("Group become empty, remove it.")
                         self.groups.remove(group)
                 return
-        log.error("Can't remove stream from the collection. Listener not found (stream: %s)", stream_name)
+        log.error("Can't remove stream from the collection. Listener not found (stream: %s)",
+                  stream_name)
 
     def get_groups(self):
         """Get listeners groups."""
