@@ -10,11 +10,12 @@ import Button from "./Button";
 import Status from "./Status";
 
 export async function loader({ params }) {
-  return params.jobId;
+  return 'jobId' in params ? params.jobId : null;
 }
 
 function App() {
   const navigate = useNavigate();
+  // jobId from the path
   const jobId = useLoaderData();
   const [shouldConnect, setShouldConnect] = useState(!!jobId)
   const [socketUrl, setSocketUrl] = useState(jobWebSocketUrl(jobId));

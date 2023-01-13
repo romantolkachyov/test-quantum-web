@@ -87,15 +87,19 @@ class JobResultListener:
         await self.ensure_started()
         queue = self.subscribe(job_id)
         log.debug("get_messages subscribed to %s stream", job_id)
-        while True:
-            msg = await queue.get()
-            log.debug("get_messages receive message: %s", msg)
-            yield msg
-            queue.task_done()
-            if msg.get('type') == 'stop':
-                log.debug("get_messages receive stop message, unsubscribing")
-                break
-        self.unsubscribe(job_id, queue)
+        try:
+            while True:
+                msg = await queue.get()
+                log.debug("get_messages receive message: %s", msg)
+                yield msg
+                queue.task_done()
+                if msg.get('type') == 'stop':
+                    log.debug("get_messages receive stop message, unsubscribing")
+                    break
+        except asyncio.CancelledError as e:  # pragma: no cover
+            raise e
+        finally:
+            self.unsubscribe(job_id, queue)
 
     async def wait_job_stream(self, job_id: str, max_tries: int = 60, sleep_time=1):
         """Block until job stream will be created by worker.
