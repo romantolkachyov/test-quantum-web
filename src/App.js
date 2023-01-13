@@ -14,15 +14,42 @@ export async function loader({ params }) {
   return {jobId: params.jobId};
 }
 
+const defaultData = []
+let sampleDate = moment()
+for(let i=0; i<=100; i++) {
+  defaultData.push({
+    date: sampleDate.valueOf(),
+    energy: Math.cos(i / 5)
+  })
+  sampleDate.add('1', 'minute')
+}
+
 function App() {
   const navigate = useNavigate();
   const jobId = useLoaderData();
   const [shouldConnect, setShouldConnect] = useState(!!jobId)
   const [shouldReconnect, setShouldReconnect] = useState(true)
   const [socketUrl, setSocketUrl] = useState(jobId ? socketBaseUrl + jobId.jobId + '/' : "");
-  const [data, setData] = useState([])
+  const [data, setData] = useState(defaultData)
   const [minEnergy, setMinEnergy] = useState(0.0)
+  const [buttonState, setButtonState] = useState("loading")
+  const [lastStopReason, setLastStopReason] = useState("")
+  const [demoMode, setDemoMode] = useState(true)
+
+  function getStatusText() {
+    if (buttonState === 'waiting') {
+      return "Waiting for a worker to pickup your task."
+    } else if (buttonState === 'running') {
+      return (
+        <div>Worker is running your task at the moment.</div>
+      )
+    } else if (buttonState === 'active' && lastStopReason) {
+      return lastStopReason
+    }
+    return (<div>&nbsp;</div>)
+  }
   function onClickStart() {
+    setButtonState('waiting')
     fetch("/api/start")
       .then((response) => response.json())
       .then(data => {
@@ -36,17 +63,16 @@ function App() {
         navigate('/job/' + data.job_id + '/')
       })
   }
-  const {
-    readyState,
-    lastMessage
-  } = useWebSocket(socketUrl, {
+  useWebSocket(socketUrl, {
     onOpen: () => {
+      setDemoMode(false)
       setData([])
       console.log("WebSocket opened")
     },
     shouldReconnect: (closeEvent) => false,
     onMessage: (event) => {
       console.log("Message event:", event)
+      setButtonState('running')
       const d = JSON.parse(event.data)
       if (d.type === "solution") {
         const startDate = moment(d.date)
@@ -66,7 +92,9 @@ function App() {
           setMinEnergy(energy)
         }
       } else if (d.type === "stop") {
+        setButtonState('active')
         setShouldReconnect(false)
+        setLastStopReason(d.reason)
         console.log("STOP RECEIVED")
       }
     },
@@ -81,26 +109,15 @@ function App() {
       }
     }
   }, [jobId])
-  const connectionStatus = {
-    [ReadyState.CONNECTING]: 'Connecting',
-    [ReadyState.OPEN]: 'Open',
-    [ReadyState.CLOSING]: 'Closing',
-    [ReadyState.CLOSED]: 'Closed',
-    [ReadyState.UNINSTANTIATED]: 'Uninstantiated',
-  }[readyState];
   return (
     <div className="App">
       <header className="App-header">
         <h1>Evolution Log</h1>
       </header>
-      <Chart data={data} />
+      <Chart data={data} demoMode={demoMode} hackOffset={1000} />
       <p className="energy-text">Min energy: {minEnergy.toFixed(2)}</p>
-      <Button onClick={onClickStart} />
-      <p style={{marginTop: "2em", color: "gray"}}>
-        Job ID: { jobId ? jobId.jobId : null } &nbsp;
-        Last message: {lastMessage ? lastMessage.data : null}.
-        Connection status: {readyState ? connectionStatus : null}
-      </p>
+      <Button onClick={onClickStart} state={buttonState} />
+      <div style={{marginTop: "2em", color: "gray"}}>{getStatusText()}</div>
     </div>
   );
 }
