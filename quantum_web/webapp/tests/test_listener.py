@@ -49,7 +49,8 @@ class ListenerTest(IsolatedAsyncioTestCase):
         subscribe_mock.assert_called_once_with("1234")
 
     @patch("quantum_web.webapp.listener.listener.JobResultListener.start")
-    @patch("quantum_web.webapp.listener.listener.asyncio.Queue.get", side_effect=asyncio.CancelledError)
+    @patch("quantum_web.webapp.listener.listener.asyncio.Queue.get",
+           side_effect=asyncio.CancelledError)
     async def test_get_message_cancelled(self, get_mock: MagicMock, start_mock: MagicMock):
         gen = self.listener.get_messages("1234")
         with self.assertRaises(asyncio.CancelledError):

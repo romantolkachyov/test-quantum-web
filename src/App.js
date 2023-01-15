@@ -17,26 +17,46 @@ function App() {
   const navigate = useNavigate();
   // jobId from the path
   const jobId = useLoaderData();
-  const [shouldConnect, setShouldConnect] = useState(!!jobId)
-  const [socketUrl, setSocketUrl] = useState(jobWebSocketUrl(jobId));
-  const [chartData, setChartData] = useState(generateDemoData())
+
+  useEffect(() => {
+    if (!jobId) {
+      setStatus('active')
+    }
+  }, [jobId])
+
+  // rendered chart data
+  const [chartData, setChartData] = useState(jobId ? [] : generateDemoData())
+  // minimal energy received from the server for this job
   const [minEnergy, setMinEnergy] = useState(0.0)
+  // app status (mostly the button status)
   const [status, setStatus] = useState("loading")
+  // last "stop" event text
   const [lastStopReason, setLastStopReason] = useState("")
+  // last error text
+  const [error, setError] = useState("")
+  // render demo data instead of empty chart
   const [demoMode, setDemoMode] = useState(true)
 
   const onClickStart = useCallback(() => {
     setStatus('waiting')
     fetch("/api/start")
-      .then((response) => response.json())
+      .then((response) => {
+        if (response.status !== 200) {
+          throw Error("Failed to schedule the job (server error).")
+        }
+        return response.json()
+      })
       .then(data => {
         if (!('job_id' in data)) {
-          alert("Invalid server response")
-          return
+          throw Error("Invalid server response (no job_id in response)")
         }
         setChartData([])
         setMinEnergy(0.0)
         navigate('/job/' + data.job_id + '/')
+      })
+      .catch(error => {
+        setError(error.toString())
+        setStatus('active')
       })
   }, [navigate])
 
@@ -54,41 +74,37 @@ function App() {
     return [...chartData]
   }
 
-  useWebSocket(socketUrl, {
-    onOpen: () => {
-      setDemoMode(false)
-      setChartData([])
-    },
-    shouldReconnect: (closeEvent) => false,
-    onMessage: (event) => {
-      if (status === 'waiting') {
-        setStatus('running')
-      }
-      const d = JSON.parse(event.data)
-      if (d.type === "solution") {
-        const energy = parseFloat(d.energy)
-        if (energy < minEnergy) {
-          setMinEnergy(energy)
-        }
-        setChartData(addSolution(d.date, energy))
-      } else if (d.type === "stop") {
+  useWebSocket(
+    useCallback(() => jobId ? jobWebSocketUrl(jobId) : "", [jobId]),
+    {
+      onOpen: () => {
+        setDemoMode(false)
+        setChartData([])
+      },
+      onError: () => {
+        setError("WebSocket connection error.")
         setStatus('active')
-        setLastStopReason(d.reason)
-      }
+      },
+      shouldReconnect: (closeEvent) => false,
+      onMessage: (event) => {
+        if (status === 'waiting' || status === 'loading') {
+          setStatus('running')
+        }
+        const d = JSON.parse(event.data)
+        if (d.type === "solution") {
+          const energy = parseFloat(d.energy)
+          if (energy < minEnergy) {
+            setMinEnergy(energy)
+          }
+          setChartData(addSolution(d.date, energy))
+        } else if (d.type === "stop") {
+          setStatus('active')
+          setLastStopReason(d.reason)
+        }
+      },
     },
-  }, shouldConnect)
-
-  useEffect(() => {
-    if (jobId) {
-      const newUrl = jobWebSocketUrl(jobId);
-      if (newUrl !== socketUrl) {
-        setSocketUrl(newUrl);
-        setShouldConnect(true);
-      }
-    } else {
-      setStatus('active')
-    }
-  }, [jobId])
+    !!jobId
+  )
 
   return (
     <div className="App">
@@ -98,7 +114,7 @@ function App() {
       <Chart data={chartData} demoMode={demoMode} hackOffset={1000} />
       <p className="energy-text">Min energy: {minEnergy.toFixed(2)}</p>
       <Button onClick={onClickStart} state={status} />
-      <Status state={status} lastStopReason={lastStopReason} />
+      <Status state={status} error={error} lastStopReason={lastStopReason} />
     </div>
   );
 }

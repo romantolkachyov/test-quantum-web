@@ -1,6 +1,6 @@
 import moment from "moment";
 
-const socketBaseUrl = "ws://localhost:8000/ws/process/"
+const socketBaseUrl = `ws://${window.location.host}/ws/process/`
 
 export function generateDemoData() {
   const defaultData = []

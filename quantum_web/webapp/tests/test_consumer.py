@@ -6,6 +6,7 @@ from channels.testing import WebsocketCommunicator
 from django.test import TestCase
 
 from quantum_web.asgi import application
+from quantum_web.webapp.listener.listener import StreamUnavailable
 
 FAKE_MESSAGES = [
     {"type": "start"},
@@ -31,6 +32,17 @@ class ConsumerTest(TestCase):
         await comm.connect()
         resp = await comm.receive_json_from()
         self.assertEqual(resp, FAKE_MESSAGES[0])
+
+    @patch("quantum_web.webapp.consumers.listener.get_messages")
+    @patch("quantum_web.webapp.consumers.listener.wait_job_stream", side_effect=StreamUnavailable)
+    async def test_streaming_job_stream_unavailable(self, wait_mock: Mock, get_messages: Mock):
+        comm = WebsocketCommunicator(application, "/ws/process/1234/")
+        await comm.connect()
+        resp = await comm.receive_json_from()
+        self.assertEqual(resp, {
+            "type": "stop",
+            "reason": "Worker didn't start for too long. Please try later."
+        })
 
     @patch("quantum_web.webapp.consumers.listener.get_messages", new=fake_get_messages)
     @patch("quantum_web.webapp.consumers.listener.wait_job_stream")

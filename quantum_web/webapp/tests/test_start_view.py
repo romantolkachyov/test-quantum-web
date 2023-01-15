@@ -1,7 +1,10 @@
+from unittest.mock import patch, Mock
+
 from django.test import TestCase
 
 
 class StartViewTest(TestCase):
-    async def test_simple(self):
+    @patch("quantum_web.webapp.views.cache.client.get_client")
+    async def test_simple(self, get_client_mock: Mock):
         resp = await self.async_client.get("/api/start")
         self.assertEqual(resp.status_code, 200)

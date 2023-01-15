@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/4.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -147,15 +148,24 @@ CACHES = {
 }
 
 # queue with quantum jobs
-JOB_QUEUE = "quantum_jobs"
+JOB_QUEUE = os.getenv("JOB_QUEUE", "quantum_jobs")
 
 # result queue key prefix
-RESULT_QUEUE_PREFIX = "quantum_result"
+RESULT_QUEUE_PREFIX = os.getenv("RESULT_QUEUE_PREFIX", "quantum_result")
 
 # result queue expire time
-RESULT_QUEUE_EXPIRE = 60 * 60
+RESULT_QUEUE_EXPIRE = int(os.getenv("RESULT_QUEUE_EXPIRE", str(60 * 60)))
 
-WORKER_MAX_CONCURRENCY = 3
+# number of tries when awaiting job stream
+STREAM_WAIT_MAX_TRIES = int(os.getenv("STREAM_WAIT_MAX_TRIES", "60"))
+
+# sleep interval between stream wait tries
+STREAM_WAIT_SLEEP_INTERVAL = int(os.getenv("STREAM_WAIT_SLEEP_INTERVAL", "5"))
+
+# maximum number of concurrent jobs running on a single worker instance
+WORKER_MAX_CONCURRENCY = int(os.getenv("WORKER_MAX_CONCURRENCY", "3"))
+
+QUANTUM_LOG_LEVEL = os.getenv("QUANTUM_LOG_LEVEL", "INFO")
 
 LOGGING = {
     "version": 1,
@@ -185,12 +195,12 @@ LOGGING = {
         },
         "quantum_web": {
             "handlers": ["console"],
-            "level": "INFO",
+            "level": QUANTUM_LOG_LEVEL,
             "propagate": False,
         },
         "quantum_web.webapp": {
             "handlers": ["console"],
-            "level": "DEBUG",
+            "level": QUANTUM_LOG_LEVEL,
             "propagate": False,
         },
     }

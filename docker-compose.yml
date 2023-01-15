@@ -11,6 +11,15 @@ x-app-common: &app-common
       condition: service_healthy
 
 services:
+  nginx:
+    image: nginx:stable-alpine
+    volumes:
+      - ./nginx_config:/etc/nginx/conf.d/
+    depends_on:
+      - api
+      - frontend
+    ports:
+      - 8000:80
   frontend:
     build:
       context: .
@@ -19,8 +28,6 @@ services:
       CHOKIDAR_USEPOLLING: "true"
     depends_on:
       - api
-    ports:
-      - 3000:3000
     volumes:
       - .:/app
   api:
@@ -33,8 +40,6 @@ services:
       - |
         python manage.py collectstatic --no-input
         uvicorn quantum_web.asgi:application --reload
-    ports:
-      - 8000:8000
   worker:
     <<: *app-common
     command:

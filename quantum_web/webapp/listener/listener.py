@@ -23,8 +23,6 @@ class JobResultListener:
     We should spawn connection and block indefinitely for XREAD instead (so we will have
     a number of active redis connection equal to the number of listeners, and we can reach
     connection number limit on the redis side).
-
-    Groups allow to have multiple listeners with different offset for a single stream.
     """
     listeners: dict[str, Subscriber]
     started: bool = False
@@ -101,7 +99,12 @@ class JobResultListener:
         finally:
             self.unsubscribe(job_id, queue)
 
-    async def wait_job_stream(self, job_id: str, max_tries: int = 60, sleep_time=1):
+    async def wait_job_stream(
+        self,
+        job_id: str,
+        max_tries: int = settings.STREAM_WAIT_MAX_TRIES,
+        sleep_time: int = settings.STREAM_WAIT_SLEEP_INTERVAL
+    ):
         """Block until job stream will be created by worker.
 
         Will try `max_tries` times and will sleep `sleep_time` between tries.

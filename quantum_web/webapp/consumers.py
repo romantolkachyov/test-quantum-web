@@ -5,7 +5,7 @@ from channels.exceptions import StopConsumer
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django_async_redis.client import DefaultClient
 
-from .listener.listener import listener
+from .listener.listener import StreamUnavailable, listener
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +42,13 @@ class SteamingRequestConsumer(AsyncJsonWebsocketConsumer):
     async def streaming_job(self):
         try:
             job_id = self.scope['url_route']['kwargs']['job_id']
-            await listener.wait_job_stream(job_id)
+            try:
+                await listener.wait_job_stream(job_id)
+            except StreamUnavailable:
+                await self.send_json({
+                    "type": "stop",
+                    "reason": "Worker didn't start for too long. Please try later."
+                })
             async for payload in listener.get_messages(job_id):
                 log.debug("Streaming job received payload: %s", payload)
                 await self.send_json(payload)
