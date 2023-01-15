@@ -15,7 +15,7 @@ coverage.xml
 poetry.toml
 
 # django
-static
+/static
 
 # linters
 .ruff_cache
