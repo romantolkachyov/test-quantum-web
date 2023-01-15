@@ -1,0 +1,8 @@
+services:
+  frontend:
+    command:
+      - npm
+      - exec
+      - serve
+      - -s
+      - build
