@@ -9,6 +9,10 @@ import Chart from "./Chart";
 import Button from "./Button";
 import Status from "./Status";
 
+// used to shift chart in order to invert chart area for negative values
+// (fill chart below line event if value is negative)
+const CHART_VALUE_OFFSET = 1000;
+
 export async function loader({ params }) {
   return 'jobId' in params ? params.jobId : null;
 }
@@ -70,7 +74,7 @@ function App() {
         dateValue = lastDate + 1
       }
     }
-    chartData.push({date: dateValue, energy: energy + 1000})
+    chartData.push({date: dateValue, energy: energy + CHART_VALUE_OFFSET})
     return [...chartData]
   }
 
@@ -111,7 +115,7 @@ function App() {
       <header className="App-header">
         <h1>Evolution Log</h1>
       </header>
-      <Chart data={chartData} demoMode={demoMode} hackOffset={1000} />
+      <Chart data={chartData} demoMode={demoMode} dataOffset={CHART_VALUE_OFFSET} />
       <p className="energy-text">Min energy: {minEnergy.toFixed(2)}</p>
       <Button onClick={onClickStart} state={status} />
       <Status state={status} error={error} lastStopReason={lastStopReason} />

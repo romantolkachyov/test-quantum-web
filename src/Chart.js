@@ -8,16 +8,16 @@ import {
 } from 'recharts';
 import moment from "moment";
 
-function Chart({ data, hackOffset, demoMode }) {
+function Chart({ data, dataOffset, demoMode }) {
   if (demoMode) {
-    hackOffset = 0;
+    dataOffset = 0;
   }
   const dateFormatter = date => {
     return moment(date).format('DD MMM HH:mm');
   };
 
   const energyFormatter = value => {
-    return (value - hackOffset).toFixed(2)
+    return (value - dataOffset).toFixed(2)
   }
 
   const tooltipContentFormatter = (label, payload) => {
