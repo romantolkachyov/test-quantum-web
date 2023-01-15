@@ -163,7 +163,7 @@ STREAM_WAIT_MAX_TRIES = int(os.getenv("STREAM_WAIT_MAX_TRIES", "60"))
 STREAM_WAIT_SLEEP_INTERVAL = int(os.getenv("STREAM_WAIT_SLEEP_INTERVAL", "5"))
 
 # maximum number of concurrent jobs running on a single worker instance
-WORKER_MAX_CONCURRENCY = int(os.getenv("WORKER_MAX_CONCURRENCY", "3"))
+WORKER_MAX_CONCURRENCY = int(os.getenv("WORKER_MAX_CONCURRENCY", "2"))
 
 QUANTUM_LOG_LEVEL = os.getenv("QUANTUM_LOG_LEVEL", "INFO")
 

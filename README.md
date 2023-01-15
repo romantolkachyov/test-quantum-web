@@ -10,6 +10,14 @@ Project layout:
 * `public` — react app static
 * `sdk_mock` — embed package
 
+## Demo server
+
+http://192.248.176.29:8000/
+
+* Single worker
+* Single VPS (1vCPU, 1Gb)
+* Max concurrent jobs for a single worker: 2
+
 ## Getting started
 
 ```shell
